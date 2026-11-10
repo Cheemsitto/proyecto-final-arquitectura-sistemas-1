@@ -125,3 +125,11 @@ cd broker && .venv\Scripts\python -m pytest
 ## Publicación en la nube
 
 Los servicios corren con Docker en un servidor Linux y se publican con túneles de Cloudflare. Vea [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
+| Servicio | Dirección pública | Swagger |
+| --- | --- | --- |
+| Broker | https://manuals-zip-resident-produce.trycloudflare.com | `/docs` |
+| Productos | https://manhattan-dot-montana-let.trycloudflare.com | `/api-docs` |
+| Pedidos | https://mambo-territory-convergence-recipe.trycloudflare.com | `/swagger-ui.html` |
+
+Para probar en la nube, use en Postman el entorno **Ecommerce - Nube** con la dirección del broker. Si el servidor se reinicia, las direcciones cambian; se consultan con `bash despliegue/urls.sh`.
