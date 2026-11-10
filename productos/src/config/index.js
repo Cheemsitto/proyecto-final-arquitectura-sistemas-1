@@ -18,6 +18,8 @@ function ssl() {
 
 module.exports = {
   puerto: entero(process.env.PORT, 3001),
+  // Dirección donde escucha; vacía = todas. En el servidor se usa 127.0.0.1.
+  host: process.env.HOST || '',
   // Clave que deben enviar el broker y el servicio de pedidos en X-Service-Key.
   claveServicio: process.env.SERVICE_KEY || '',
   db: {

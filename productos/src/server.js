@@ -15,10 +15,15 @@ async function iniciar() {
     await sequelize.sync();
   }
 
-  app.listen(config.puerto, () => {
+  const alIniciar = () => {
     console.log(`Servicio de productos escuchando en el puerto ${config.puerto}`);
     console.log(`Swagger: http://localhost:${config.puerto}/api-docs`);
-  });
+  };
+  if (config.host) {
+    app.listen(config.puerto, config.host, alIniciar);
+  } else {
+    app.listen(config.puerto, alIniciar);
+  }
 }
 
 iniciar().catch((err) => {
