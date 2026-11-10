@@ -1,0 +1,86 @@
+# Blueprint de Render: crea los tres servicios desde este repositorio.
+# Las variables con "sync: false" se escriben en el panel de Render al crear el Blueprint.
+# Guía paso a paso: docs/DESPLIEGUE.md
+
+envVarGroups:
+  - name: ecommerce-mysql
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+services:
+  - type: web
+    name: ecommerce-productos
+    runtime: docker
+    plan: free
+    dockerContext: ./productos
+    dockerfilePath: ./productos/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: ecommerce-mysql
+      - key: DB_NAME
+        value: productos_db
+      - key: DB_SSL
+        value: "true"
+      - key: SERVICE_KEY
+        sync: false
+
+  - type: web
+    name: ecommerce-pedidos
+    runtime: docker
+    plan: free
+    dockerContext: ./pedidos
+    dockerfilePath: ./pedidos/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: ecommerce-mysql
+      - key: DB_NAME
+        value: pedidos_db
+      - key: DB_SSL_MODE
+        value: REQUIRED
+      - key: SERVICE_KEY
+        sync: false
+      - key: PRODUCTOS_URL
+        sync: false
+      - key: PRODUCTOS_SERVICE_KEY
+        sync: false
+      - key: PRODUCTOS_TIMEOUT_MS
+        value: "5000"
+
+  - type: web
+    name: ecommerce-broker
+    runtime: docker
+    plan: free
+    dockerContext: ./broker
+    dockerfilePath: ./broker/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: ecommerce-mysql
+      - key: DB_NAME
+        value: broker_db
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRA_MIN
+        value: "60"
+      - key: ADMIN_USUARIO
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: PRODUCTOS_URL
+        sync: false
+      - key: PEDIDOS_URL
+        sync: false
+      - key: PRODUCTOS_SERVICE_KEY
+        sync: false
+      - key: PEDIDOS_SERVICE_KEY
+        sync: false
+      - key: TIMEOUT_S
+        value: "60"

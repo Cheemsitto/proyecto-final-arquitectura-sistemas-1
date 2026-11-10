@@ -1,0 +1,11 @@
+.env
+node_modules/
+target/
+.venv/
+__pycache__/
+.pytest_cache/
+.idea/
+*.iml
+
+# El informe se entrega aparte (incluye datos personales)
+docs/informe/

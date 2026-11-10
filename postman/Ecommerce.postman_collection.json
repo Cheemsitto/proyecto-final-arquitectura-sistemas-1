@@ -1,0 +1,1177 @@
+{
+  "info": {
+    "name": "Ecommerce - Proyecto final Arquitectura de Sistemas I",
+    "description": "Todas las peticiones entran por el broker ({{broker_url}}). Ejecute las carpetas 01 a 05 en orden: el login guarda el token y las demás peticiones lo usan. La carpeta 06 necesita preparar el escenario antes (lea la descripción de cada petición).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "productoId",
+      "value": ""
+    },
+    {
+      "key": "precioProducto",
+      "value": ""
+    },
+    {
+      "key": "pedidoId",
+      "value": ""
+    },
+    {
+      "key": "productoTemporalId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Autenticación",
+      "item": [
+        {
+          "name": "Login correcto (guarda el token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/auth/login",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{usuario}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json();",
+                  "pm.test(\"Entrega un token bearer\", () => {",
+                  "  pm.expect(datos.access_token).to.be.a(\"string\");",
+                  "  pm.expect(datos.token_type).to.eql(\"bearer\");",
+                  "});",
+                  "pm.collectionVariables.set(\"token\", datos.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login con contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/auth/login",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{usuario}}\",\n  \"password\": \"incorrecta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ver usuario del token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/auth/perfil",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "auth",
+                "perfil"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve el usuario\", () => pm.expect(pm.response.json().usuario).to.eql(pm.environment.get(\"usuario\") || pm.variables.get(\"usuario\")));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Seguridad del broker",
+      "item": [
+        {
+          "name": "Productos sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"El broker rechaza la petición sin token\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Productos con token inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "token.invalido.123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"El broker rechaza el token inválido\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear pedido sin token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 1,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"El broker rechaza la petición sin token\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Productos",
+      "item": [
+        {
+          "name": "Crear producto con 5 unidades",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto demo {{$timestamp}}\",\n  \"descripcion\": \"Creado desde Postman\",\n  \"precio\": 100.5,\n  \"existencia\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "const producto = pm.response.json();",
+                  "pm.test(\"Queda con 5 unidades\", () => pm.expect(producto.existencia).to.eql(5));",
+                  "pm.collectionVariables.set(\"productoId\", producto.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto con precio 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Precio inválido\",\n  \"precio\": 0,\n  \"existencia\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Explica la regla del precio\", () => pm.expect(pm.response.json().detalles).to.include(\"El precio debe ser mayor a 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto con precio negativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Precio negativo\",\n  \"precio\": -20,\n  \"existencia\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto con existencia 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sin existencia\",\n  \"precio\": 10,\n  \"existencia\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Explica la regla de la existencia\", () => pm.expect(pm.response.json().detalles).to.include(\"La existencia debe ser mayor a 0\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve una lista\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar producto creado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Tiene 5 unidades\", () => pm.expect(pm.response.json().existencia).to.eql(5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar precio del producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto demo actualizado\",\n  \"descripcion\": \"Precio actualizado\",\n  \"precio\": 120,\n  \"existencia\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const producto = pm.response.json();",
+                  "pm.test(\"El precio cambió a 120\", () => pm.expect(producto.precio).to.eql(120));",
+                  "pm.collectionVariables.set(\"precioProducto\", producto.precio);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar producto inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/999999",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Pedidos (comunicación entre servicios)",
+      "item": [
+        {
+          "name": "Crear pedido de 2 unidades",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": {{productoId}},\n  \"cantidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "const pedido = pm.response.json();",
+                  "pm.test(\"Calcula el total con el precio vigente\", () => pm.expect(pedido.total).to.eql(2 * Number(pm.collectionVariables.get(\"precioProducto\"))));",
+                  "pm.collectionVariables.set(\"pedidoId\", pedido.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar existencia descontada (5 - 2 = 3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"La existencia bajó a 3\", () => pm.expect(pm.response.json().existencia).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido con existencia insuficiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": {{productoId}},\n  \"cantidad\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar que la existencia sigue en 3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"El pedido rechazado no descontó nada\", () => pm.expect(pm.response.json().existencia).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido de producto inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 999999,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido con cantidad 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": {{productoId}},\n  \"cantidad\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pedidos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye el pedido creado\", () => pm.expect(pm.response.json().map(p => p.id)).to.include(Number(pm.collectionVariables.get(\"pedidoId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar pedido creado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos/{{pedidoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedidoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es de 2 unidades\", () => pm.expect(pm.response.json().cantidad).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar pedido inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos/999999",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Eliminar producto",
+      "item": [
+        {
+          "name": "Crear producto temporal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/productos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto temporal\",\n  \"precio\": 1,\n  \"existencia\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"productoTemporalId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar producto temporal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoTemporalId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoTemporalId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar producto eliminado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoTemporalId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoTemporalId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Ya no existe\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Fallas entre servicios (preparar antes)",
+      "description": "Antes, ejecute 01 Autenticación > Login correcto para tener un token vigente. Estas peticiones necesitan cambiar la configuración del servicio de pedidos y reiniciarlo. Después de probarlas, devuelva la configuración original.",
+      "item": [
+        {
+          "name": "Pedido cuando productos no responde a tiempo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 1,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Preparación: en pedidos/.env cambie PRODUCTOS_URL=http://10.255.255.1:3001 (dirección que no responde) y reinicie pedidos. Pedidos espera PRODUCTOS_TIMEOUT_MS (3 s) y responde 504."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 504\", () => pm.response.to.have.status(504));",
+                  "pm.test(\"Explica que productos no respondió a tiempo\", () => pm.expect(pm.response.json().error).to.include(\"no respondió a tiempo\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido cuando productos rechaza la autenticación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 1,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Preparación: en pedidos/.env cambie PRODUCTOS_SERVICE_KEY por un valor incorrecto y reinicie pedidos. Productos responde 401 y pedidos lo informa con 502."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 502\", () => pm.response.to.have.status(502));",
+                  "pm.test(\"Explica el error de autenticación\", () => pm.expect(pm.response.json().error).to.include(\"autenticación\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido cuando productos está apagado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": 1,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Preparación: detenga el servicio de productos. Pedidos responde 503."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 503\", () => pm.response.to.have.status(503));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
