@@ -16,7 +16,7 @@ broker_db ◄── Broker (usuarios)
 | `productos/` | Productos | Node.js, Express | MVC | 3001 | `productos_db` | Sequelize |
 | `pedidos/` | Pedidos | Java, Spring Boot | Capas | 8082 | `pedidos_db` | Spring Data JPA (Hibernate) |
 
-Otras carpetas: `sql/` (scripts de las tres bases), `postman/` (colección y entornos), `docs/` (publicación en la nube).
+Otras carpetas: `sql/` (scripts de las tres bases), `postman/` (colección y entornos), `despliegue/` (scripts para el servidor) y `docs/` (publicación en la nube).
 
 ## Seguridad
 
@@ -124,4 +124,4 @@ cd broker && .venv\Scripts\python -m pytest
 
 ## Publicación en la nube
 
-Vea [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+Los servicios corren con Docker en un servidor Linux y se publican con túneles de Cloudflare. Vea [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).

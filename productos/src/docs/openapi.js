@@ -1,5 +1,3 @@
-const config = require('../config');
-
 const errorSchema = {
   type: 'object',
   properties: {
@@ -44,7 +42,6 @@ module.exports = {
       'Servicio MVC con Express y Sequelize. Todas las rutas /api/productos exigen la cabecera ' +
       'X-Service-Key; en el sistema completo la agrega el broker después de validar el token.',
   },
-  servers: [{ url: `http://localhost:${config.puerto}` }],
   security: [{ ClaveServicio: [] }],
   components: {
     securitySchemes: {

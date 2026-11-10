@@ -1,51 +1,52 @@
 # Publicación en la nube
 
-Propuesta sin costo: los tres servicios en **Render** (plan gratis, con Docker) y una base **MySQL gratis en Aiven**.
-Cada servicio usa su propia base de datos dentro del mismo servidor MySQL: `productos_db`, `pedidos_db` y `broker_db`.
+Los tres servicios y la base de datos corren en un servidor Linux (VPS) con Docker. Cada servicio se publica con un túnel de Cloudflare, que entrega una dirección `https://….trycloudflare.com` sin abrir puertos en el firewall.
 
-> En el plan gratis de Render, un servicio se apaga después de unos 15 minutos sin uso. La primera petición lo despierta y puede tardar cerca de un minuto. Antes de la demostración, abra el `/health` de los tres servicios.
+```
+Internet ─ HTTPS ─► Túnel de Cloudflare ─► 127.0.0.1:18000 ─► contenedor broker    :8000
+                                       ─► 127.0.0.1:13001 ─► contenedor productos :3001
+                                       ─► 127.0.0.1:18082 ─► contenedor pedidos   :8082
+Red interna de Docker (ecommerce-red): broker, productos, pedidos y ecommerce-mysql (MySQL 8.4)
+```
 
-## 1. Subir el proyecto a GitHub
+- Cada servicio usa su propia base de datos dentro del contenedor de MySQL: `productos_db`, `pedidos_db` y `broker_db`.
+- MySQL no se publica fuera del servidor. Los servicios solo escuchan en `127.0.0.1`; el acceso público es por los túneles.
+- Productos y pedidos tienen dirección pública para consultar su Swagger, pero sus rutas `/api` exigen la clave interna. Postman siempre usa la dirección del broker.
 
-Render construye los servicios desde un repositorio. Suba la carpeta `Proyecto final` completa. Los archivos `.env` no se suben porque están en `.gitignore`.
+## Requisitos del servidor
 
-## 2. Crear la base MySQL en Aiven
+Linux con Docker, `openssl`, `curl` y `systemd`, y acceso como root.
 
-1. Cree una cuenta en aiven.io y un servicio **MySQL** con el plan **Free**.
-2. En la pestaña **Overview** copie: *Host*, *Port*, *User* (`avnadmin`) y *Password*.
-3. Conéctese con MySQL Workbench usando esos datos, con SSL en modo `Require`, y ejecute los tres scripts de la carpeta `sql/` en orden. Así quedan las tablas y los productos de ejemplo.
+## Desplegar
 
-Si no ejecuta los scripts, los servicios crean sus tablas al arrancar, pero sin datos de ejemplo.
+```bash
+git clone <repositorio> /opt/ecommerce-arquitectura/src
+cd /opt/ecommerce-arquitectura/src
+bash despliegue/desplegar-vps.sh
+```
 
-## 3. Crear los servicios en Render
+El script:
 
-1. En render.com elija **New → Blueprint** y seleccione el repositorio. Render lee `render.yaml` y propone tres servicios: `ecommerce-productos`, `ecommerce-pedidos` y `ecommerce-broker`.
-2. Llene las variables que pide:
+1. Genera claves aleatorias la primera vez y las guarda en `/opt/ecommerce-arquitectura/env/` (permisos 600). La contraseña del usuario `admin` del broker queda en `broker.env`.
+2. Crea la red `ecommerce-red` y el contenedor `ecommerce-mysql`. La primera vez ejecuta los scripts de `sql/`.
+3. Construye las imágenes de los tres servicios con sus `Dockerfile` y crea los contenedores con reinicio automático.
+4. Espera a que `/health` responda en los tres.
+5. Crea los servicios `ecommerce-tunel-broker`, `ecommerce-tunel-productos` y `ecommerce-tunel-pedidos` y muestra las direcciones públicas.
 
-| Variable | Valor |
-| --- | --- |
-| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` | Datos de Aiven (paso 2) |
-| `SERVICE_KEY`, `PRODUCTOS_SERVICE_KEY`, `PEDIDOS_SERVICE_KEY` | La **misma** clave interna en todas. Use una cadena larga y aleatoria. |
-| `ADMIN_PASSWORD` | Contraseña del usuario `admin` del broker. Use una distinta a `Admin123*`, que es la de ejemplo y aparece en el repositorio público. |
-| `PRODUCTOS_URL` (en pedidos y en broker) | `https://ecommerce-productos.onrender.com` |
-| `PEDIDOS_URL` (en broker) | `https://ecommerce-pedidos.onrender.com` |
+Para publicar cambios: `git pull` y volver a ejecutar el script. Se conservan los datos, las claves y las direcciones.
 
-`JWT_SECRET` lo genera Render solo.
+## Consultar las direcciones
 
-3. Si Render asigna otra dirección porque el nombre ya está ocupado, copie la dirección real del panel de cada servicio y corrija `PRODUCTOS_URL` y `PEDIDOS_URL`.
+```bash
+bash despliegue/urls.sh
+```
 
-## 4. Probar
+La dirección de un túnel cambia solo si ese túnel se reinicia, por ejemplo al reiniciar el servidor. En ese caso, vuelva a consultarla y actualice `broker_url` en el entorno **Ecommerce - Nube** de Postman.
 
-1. Abra `https://ecommerce-broker.onrender.com/health`, `https://ecommerce-productos.onrender.com/health` y `https://ecommerce-pedidos.onrender.com/health` hasta que los tres respondan.
-2. En Postman, edite el entorno **Ecommerce - Nube**: `broker_url` = dirección del broker y `password` = su `ADMIN_PASSWORD`.
-3. Ejecute las carpetas 01 a 05 de la colección con ese entorno.
+## Comandos útiles
 
-Swagger en la nube:
-
-- Broker: `https://ecommerce-broker.onrender.com/docs`
-- Productos: `https://ecommerce-productos.onrender.com/api-docs`
-- Pedidos: `https://ecommerce-pedidos.onrender.com/swagger-ui.html`
-
-## Otra opción
-
-**Railway** también despliega los tres Dockerfiles y ofrece MySQL en el mismo proyecto. Sus servicios no se apagan, pero cobra cuando se termina el crédito de prueba. Las variables son las mismas de esta guía.
+```bash
+docker ps --filter name=ecommerce            # estado de los contenedores
+docker logs --tail 50 ecommerce-pedidos      # registro de un servicio
+systemctl status ecommerce-tunel-broker      # estado de un túnel
+```
