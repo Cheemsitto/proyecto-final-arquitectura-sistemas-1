@@ -51,4 +51,12 @@ async function descontar(req, res) {
   res.json(vista.producto(producto));
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar, descontar };
+// Usado por el servicio de pedidos cuando un pedido reduce su cantidad.
+async function reponer(req, res) {
+  const id = validarId(req.params.id);
+  const cantidad = validarCantidad(req.body?.cantidad);
+  const producto = await Producto.reponerExistencia(id, cantidad);
+  res.json(vista.producto(producto));
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, descontar, reponer };

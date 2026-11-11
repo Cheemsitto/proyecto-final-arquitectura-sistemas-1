@@ -1,6 +1,7 @@
 package com.umes.pedidos.service;
 
 import com.umes.pedidos.client.ProductosClient;
+import com.umes.pedidos.dto.ActualizarPedidoRequest;
 import com.umes.pedidos.dto.CrearPedidoRequest;
 import com.umes.pedidos.dto.PedidoResponse;
 import com.umes.pedidos.dto.ProductoDto;
@@ -33,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** Pruebas unitarias de la capa de negocio con el repositorio y el cliente HTTP simulados (mocks). */
@@ -162,5 +164,60 @@ class PedidoServiceTest {
 		assertThatThrownBy(() -> pedidoService.obtener(5L))
 				.isInstanceOf(PedidoNoEncontradoException.class)
 				.hasMessage("No existe el pedido con id 5");
+	}
+
+	private Pedido pedidoExistente(int cantidad) {
+		Pedido pedido = new Pedido(1, "Teclado", cantidad, new BigDecimal("150.00"), LocalDateTime.now());
+		ReflectionTestUtils.setField(pedido, "id", 7L);
+		when(pedidoRepository.findById(7L)).thenReturn(Optional.of(pedido));
+		return pedido;
+	}
+
+	@Test
+	void subirCantidadDescuentaLaDiferencia() {
+		pedidoExistente(2);
+		when(productosClient.obtenerProducto(1)).thenReturn(producto(5));
+		when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+		PedidoResponse respuesta = pedidoService.actualizar(7L, new ActualizarPedidoRequest(4));
+
+		verify(productosClient).descontarExistencia(1, 2);
+		verify(productosClient, never()).reponerExistencia(anyInt(), anyInt());
+		assertThat(respuesta.cantidad()).isEqualTo(4);
+		assertThat(respuesta.total()).isEqualByComparingTo("600.00");
+	}
+
+	@Test
+	void bajarCantidadDevuelveLaDiferencia() {
+		pedidoExistente(5);
+		when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+		PedidoResponse respuesta = pedidoService.actualizar(7L, new ActualizarPedidoRequest(2));
+
+		verify(productosClient).reponerExistencia(1, 3);
+		verify(productosClient, never()).descontarExistencia(anyInt(), anyInt());
+		assertThat(respuesta.total()).isEqualByComparingTo("300.00");
+	}
+
+	@Test
+	void subirCantidadSinExistenciaNoCambiaNada() {
+		pedidoExistente(2);
+		when(productosClient.obtenerProducto(1)).thenReturn(producto(1));
+
+		assertThatThrownBy(() -> pedidoService.actualizar(7L, new ActualizarPedidoRequest(5)))
+				.isInstanceOf(StockInsuficienteException.class);
+
+		verify(productosClient, never()).descontarExistencia(anyInt(), anyInt());
+		verify(pedidoRepository, never()).save(any());
+	}
+
+	@Test
+	void actualizarPedidoInexistenteFalla() {
+		when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> pedidoService.actualizar(99L, new ActualizarPedidoRequest(1)))
+				.isInstanceOf(PedidoNoEncontradoException.class);
+
+		verifyNoInteractions(productosClient);
 	}
 }

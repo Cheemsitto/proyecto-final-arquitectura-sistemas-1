@@ -70,4 +70,22 @@ Producto.descontarExistencia = async function descontarExistencia(id, cantidad) 
   });
 };
 
+/** Devuelve existencia al producto, por ejemplo cuando un pedido reduce su cantidad. */
+Producto.reponerExistencia = async function reponerExistencia(id, cantidad) {
+  return sequelize.transaction(async (transaction) => {
+    const producto = await Producto.findByPk(id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!producto) {
+      throw new NoEncontradoError(`No existe el producto con id ${id}`);
+    }
+
+    producto.existencia += cantidad;
+    await producto.save({ transaction });
+    return producto;
+  });
+};
+
 module.exports = Producto;

@@ -1,5 +1,6 @@
 package com.umes.pedidos.controller;
 
+import com.umes.pedidos.dto.ActualizarPedidoRequest;
 import com.umes.pedidos.dto.CrearPedidoRequest;
 import com.umes.pedidos.dto.PedidoResponse;
 import com.umes.pedidos.exception.GlobalExceptionHandler;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -124,5 +126,23 @@ class PedidoControllerTest {
 		mvc.perform(get("/api/pedidos/3"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error").value("No existe el pedido con id 3"));
+	}
+
+	@Test
+	void actualizaElPedido() throws Exception {
+		when(pedidoService.actualizar(7L, new ActualizarPedidoRequest(3))).thenReturn(new PedidoResponse(
+				7L, 1, "Teclado", 3, new BigDecimal("150.00"), new BigDecimal("450.00"), LocalDateTime.now()));
+
+		mvc.perform(put("/api/pedidos/7").contentType(MediaType.APPLICATION_JSON).content("{\"cantidad\":3}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cantidad").value(3));
+	}
+
+	@Test
+	void actualizarConCantidadCeroResponde400() throws Exception {
+		mvc.perform(put("/api/pedidos/7").contentType(MediaType.APPLICATION_JSON).content("{\"cantidad\":0}"))
+				.andExpect(status().isBadRequest());
+
+		verifyNoInteractions(pedidoService);
 	}
 }

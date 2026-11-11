@@ -898,6 +898,242 @@
           ]
         },
         {
+          "name": "Actualizar pedido a 3 unidades",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos/{{pedidoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedidoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const pedido = pm.response.json();",
+                  "pm.test(\"Ahora es de 3 unidades\", () => pm.expect(pedido.cantidad).to.eql(3));",
+                  "pm.test(\"Recalcula el total\", () => pm.expect(pedido.total).to.eql(3 * Number(pm.collectionVariables.get(\"precioProducto\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar existencia tras subir (queda 2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Se descontó 1 unidad más\", () => pm.expect(pm.response.json().existencia).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar pedido a 1 unidad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos/{{pedidoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedidoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Ahora es de 1 unidad\", () => pm.expect(pm.response.json().cantidad).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar existencia tras bajar (queda 4)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{broker_url}}/api/productos/{{productoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Se devolvieron 2 unidades\", () => pm.expect(pm.response.json().existencia).to.eql(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar pedido sin existencia suficiente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos/{{pedidoId}}",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedidoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar pedido inexistente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{broker_url}}/api/pedidos/999999",
+              "host": [
+                "{{broker_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "999999"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Trae un mensaje de error\", () => pm.expect(pm.response.json().error).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Consultar pedido inexistente",
           "request": {
             "method": "GET",

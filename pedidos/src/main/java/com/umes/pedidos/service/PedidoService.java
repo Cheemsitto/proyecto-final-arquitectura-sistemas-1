@@ -1,6 +1,7 @@
 package com.umes.pedidos.service;
 
 import com.umes.pedidos.client.ProductosClient;
+import com.umes.pedidos.dto.ActualizarPedidoRequest;
 import com.umes.pedidos.dto.CrearPedidoRequest;
 import com.umes.pedidos.dto.PedidoResponse;
 import com.umes.pedidos.dto.ProductoDto;
@@ -49,6 +50,31 @@ public class PedidoService {
 		productosClient.descontarExistencia(productoId, cantidad);
 
 		Pedido pedido = new Pedido(productoId, producto.nombre(), cantidad, producto.precio(), LocalDateTime.now());
+		return PedidoResponse.desde(pedidoRepository.save(pedido));
+	}
+
+	/**
+	 * Cambia la cantidad de un pedido y ajusta la existencia en productos:
+	 * si sube, descuenta la diferencia (falla si no alcanza); si baja, la devuelve.
+	 */
+	public PedidoResponse actualizar(Long id, ActualizarPedidoRequest solicitud) {
+		Pedido pedido = pedidoRepository.findById(id).orElseThrow(() -> new PedidoNoEncontradoException(id));
+		int diferencia = solicitud.cantidad() - pedido.getCantidad();
+
+		if (diferencia > 0) {
+			ProductoDto producto = productosClient.obtenerProducto(pedido.getProductoId());
+			int disponible = producto.existencia() == null ? 0 : producto.existencia();
+			if (disponible < diferencia) {
+				throw new StockInsuficienteException(String.format(
+						"Existencia insuficiente para el producto %d: disponible %d, se necesitan %d más",
+						pedido.getProductoId(), disponible, diferencia));
+			}
+			productosClient.descontarExistencia(pedido.getProductoId(), diferencia);
+		} else if (diferencia < 0) {
+			productosClient.reponerExistencia(pedido.getProductoId(), -diferencia);
+		}
+
+		pedido.cambiarCantidad(solicitud.cantidad());
 		return PedidoResponse.desde(pedidoRepository.save(pedido));
 	}
 

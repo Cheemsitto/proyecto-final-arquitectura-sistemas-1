@@ -193,6 +193,25 @@ module.exports = {
         },
       },
     },
+    '/api/productos/{id}/reponer': {
+      parameters: [parametroId],
+      patch: {
+        tags: ['Uso interno (pedidos)'],
+        summary: 'Reponer existencia',
+        description:
+          'Lo llama el servicio de pedidos cuando un pedido reduce su cantidad. No se expone en el broker.',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Descuento' } } },
+        },
+        responses: {
+          200: productoJson('Existencia repuesta'),
+          400: respuestas.invalido,
+          401: respuestas.noAutorizado,
+          404: respuestas.noEncontrado,
+        },
+      },
+    },
     '/health': {
       get: {
         tags: ['Estado'],

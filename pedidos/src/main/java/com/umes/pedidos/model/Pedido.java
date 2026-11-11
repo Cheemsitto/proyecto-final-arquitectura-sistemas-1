@@ -55,6 +55,12 @@ public class Pedido {
 		this.fechaCreacion = fechaCreacion;
 	}
 
+	/** Cambia la cantidad y recalcula el total con el mismo precio unitario de la venta. */
+	public void cambiarCantidad(int nuevaCantidad) {
+		this.cantidad = nuevaCantidad;
+		this.total = precioUnitario.multiply(BigDecimal.valueOf(nuevaCantidad)).setScale(2, RoundingMode.HALF_UP);
+	}
+
 	public Long getId() {
 		return id;
 	}

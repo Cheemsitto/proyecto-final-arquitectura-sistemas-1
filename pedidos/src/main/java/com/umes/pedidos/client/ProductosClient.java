@@ -62,6 +62,20 @@ public class ProductosClient {
 		}
 	}
 
+	public ProductoDto reponerExistencia(Integer productoId, int cantidad) {
+		try {
+			return restClient.patch()
+					.uri("/api/productos/{id}/reponer", productoId)
+					.contentType(MediaType.APPLICATION_JSON)
+					.accept(MediaType.APPLICATION_JSON)
+					.body(Map.of("cantidad", cantidad))
+					.retrieve()
+					.body(ProductoDto.class);
+		} catch (RestClientException ex) {
+			throw traducir(ex, productoId);
+		}
+	}
+
 	private RuntimeException traducir(RestClientException ex, Integer productoId) {
 		if (ex instanceof RestClientResponseException respuesta) {
 			HttpStatusCode estado = respuesta.getStatusCode();

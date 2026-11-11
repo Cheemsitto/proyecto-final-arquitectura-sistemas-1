@@ -1,5 +1,6 @@
 package com.umes.pedidos.controller;
 
+import com.umes.pedidos.dto.ActualizarPedidoRequest;
 import com.umes.pedidos.dto.CrearPedidoRequest;
 import com.umes.pedidos.dto.ErrorRespuesta;
 import com.umes.pedidos.dto.PedidoResponse;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -55,6 +57,17 @@ public class PedidoController {
 	@GetMapping
 	public List<PedidoResponse> listar() {
 		return pedidoService.listar();
+	}
+
+	@Operation(summary = "Actualizar la cantidad de un pedido",
+			description = "Si la cantidad sube, descuenta la diferencia en productos; si baja, la devuelve.")
+	@ApiResponse(responseCode = "200", description = "Pedido actualizado")
+	@ApiResponse(responseCode = "400", description = "Datos inválidos", content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ApiResponse(responseCode = "404", description = "El pedido no existe", content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@ApiResponse(responseCode = "409", description = "Existencia insuficiente", content = @Content(schema = @Schema(implementation = ErrorRespuesta.class)))
+	@PutMapping("/{id}")
+	public PedidoResponse actualizar(@PathVariable Long id, @Valid @RequestBody ActualizarPedidoRequest solicitud) {
+		return pedidoService.actualizar(id, solicitud);
 	}
 
 	@Operation(summary = "Consultar pedido por id")

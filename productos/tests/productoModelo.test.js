@@ -52,3 +52,13 @@ test('lanza NoEncontradoError si el producto no existe', async () => {
 
   await expect(Producto.descontarExistencia(9, 1)).rejects.toBeInstanceOf(NoEncontradoError);
 });
+
+test('reponer suma la existencia dentro de la transacción', async () => {
+  const fila = filaFalsa(3);
+  Producto.findByPk.mockResolvedValue(fila);
+
+  const resultado = await Producto.reponerExistencia(1, 2);
+
+  expect(resultado.existencia).toBe(5);
+  expect(fila.save).toHaveBeenCalledWith({ transaction: transaccion });
+});

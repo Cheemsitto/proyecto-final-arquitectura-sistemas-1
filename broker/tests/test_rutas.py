@@ -119,3 +119,9 @@ def test_descontar_existencia_no_se_expone_al_cliente(cliente, autorizacion, ree
 
 def test_health_no_exige_token(cliente):
     assert cliente.get("/health").status_code == 200
+
+
+def test_actualizar_pedido_va_al_servicio_de_pedidos(cliente, autorizacion, reenviar):
+    cliente.put("/api/pedidos/4", json={"cantidad": 3}, headers=autorizacion)
+
+    reenviar.assert_awaited_once_with("pedidos", "PUT", "/api/pedidos/4", "admin", cuerpo={"cantidad": 3})

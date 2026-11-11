@@ -4,6 +4,7 @@ jest.mock('../src/models/producto', () => ({
   findByPk: jest.fn(),
   create: jest.fn(),
   descontarExistencia: jest.fn(),
+  reponerExistencia: jest.fn(),
 }));
 
 const request = require('supertest');
@@ -218,5 +219,24 @@ describe('PATCH /api/productos/:id/descontar', () => {
 
     expect(res.status).toBe(409);
     expect(res.body).toMatchObject({ existenciaDisponible: 5, cantidadSolicitada: 10 });
+  });
+});
+
+describe('PATCH /api/productos/:id/reponer', () => {
+  test('repone la existencia', async () => {
+    Producto.reponerExistencia.mockResolvedValue(productoFalso({ existencia: 7 }));
+
+    const res = await request(app).patch('/api/productos/1/reponer').set(CLAVE).send({ cantidad: 2 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.existencia).toBe(7);
+    expect(Producto.reponerExistencia).toHaveBeenCalledWith(1, 2);
+  });
+
+  test('rechaza una cantidad negativa', async () => {
+    const res = await request(app).patch('/api/productos/1/reponer').set(CLAVE).send({ cantidad: -1 });
+
+    expect(res.status).toBe(400);
+    expect(Producto.reponerExistencia).not.toHaveBeenCalled();
   });
 });
